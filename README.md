@@ -1,3 +1,4 @@
+(not functional W.I.P.)
 # QRNG service
 
 This repo contains a `makefile` which builds and can also install a systemd service that replaces `/dev/random` random numbers with those fetched by [qrng-client](https://github.com/LUMII-Syslab/qrng-client).
