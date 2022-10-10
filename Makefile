@@ -8,7 +8,7 @@ INC_DIR = $(PWD)/include
 LIB_DIR = $(PWD)/lib
 LDFLAGS = -L $(LIB_DIR) -l qrng
 
-BIN_DIR = $(PWD)/exe
+BIN_DIR = $(PWD)/bin
 EXE_NAME = test.out
 
 DATA_DIR = $(PWD)/data

@@ -6,14 +6,17 @@ Systemd provides a system and service manager that runs as PID 1 and starts the 
 
 `qrng-client` is already compiled into a shared object and placed in the `./lib` directory. It can be manually compiled and replaced by following the instructions in its [repo](https://github.com/LUMII-Syslab/qrng-client). Provided are also header files for `qrng-client` placed into `./include` directory.
 
+For more information visit [qrng.lumii.lv](https://qrng.lumii.lv/).
+
 ## Prerequisites
 
-In order to connect to our QRNG web service, you will need the QRNG client native library and these files:
+To use QRNG web service 3 files are required to be placed into `./config` directory:
+* ca.truststore (the root CA certificate used to sign the QRNG server HTTPS certificate and client sertificates)
+* token.keystore (your client certificate, signed by the CA that serves the QRNG server)
+* qrng.properties (key passwords and other settings)
 
-ca.truststore (the root CA certificate used to sign the QRNG server HTTPS certificate and client sertificates)
-token.keystore (your client certificate, signed by the CA that serves the QRNG server)
-qrng.properties (key passwords and other settings)
+The files are currently provided upon request by mailing to syslab_services at lumii.lv
 
 ## Usage
 
-To build and install the service, cd into the root of the repo and run `make install`.
+To build and install the service, `cd` into the root of the repo and run `make install`.
