@@ -50,11 +50,32 @@ static void __exit qrng_exit(void) {
     printk(KERN_INFO "QRNG service module has been unloaded\n");
 }
 
+static ssize_t qrng_read_iter(struct kiocb* kiocb, struct iov_iter* iter) {
+    return 69;
+}
+
 static ssize_t qrng_write_iter(struct kiocb*, struct iov_iter*) {
    printk(KERN_INFO "Sorry, QRNG service is read only\n");
    return -EFAULT;
 }
 
+static __poll_t qrng_poll(struct file* file, poll_table* wait) {
+    return EPOLLIN;
+}
+
+static long qrng_ioctl(struct file* f, unsigned int cmd, unsigned long arg)
+{
+    switch(cmd) {
+        default:
+        return -EINVAL;
+    }
+}
+
+
+static struct fasync_struct *fasync;
+static int qrng_fasync(int fd, struct file *filp, int on) {
+    return fasync_helper(fd, filp, on, &fasync);
+}
 
 module_init(qrng_init);
 module_exit(qrng_exit);
