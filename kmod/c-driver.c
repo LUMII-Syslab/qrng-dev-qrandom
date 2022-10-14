@@ -7,6 +7,7 @@
 #include <linux/ioctl.h> 
 #include <linux/slab.h>
 #include <linux/poll.h>
+#include <linux/device.h> 
 
 #define DEVICE_NAME "qrng"
 
@@ -32,6 +33,7 @@ const struct file_operations qrng_fops = {
 };
 
 static int major;
+static struct class* cls;
 
 static int __init qrng_init(void) {
     major = register_chrdev(0, DEVICE_NAME, &qrng_fops);
@@ -42,6 +44,12 @@ static int __init qrng_init(void) {
     }
 
     printk(KERN_INFO "QRNG service module has been loaded: %d\n", major);
+
+    cls = class_create(THIS_MODULE, DEVICE_NAME);
+    device_create(cls, NULL, MKDEV(major,0),NULL,DEVICE_NAME);
+
+    pr_info("Device created on /dev/%s\n", DEVICE_NAME);
+
     return 0;
 }
 
