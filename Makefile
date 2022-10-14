@@ -1,4 +1,4 @@
-PWD := .
+PWD := $(CURDIR)
 
 SRC_DIR = $(PWD)/src
 SRC_FILES = $(wildcard $(SRC_DIR)/*.cpp)
@@ -9,15 +9,33 @@ LIB_DIR = $(PWD)/lib
 LDFLAGS = -L $(LIB_DIR) -l qrng
 
 BIN_DIR = $(PWD)/bin
-EXE_NAME = test.out
-
-DATA_DIR = $(PWD)/data
+EXE_NAME = qrng.out
+EXECUTABLE = $(BIN_DIR)/$(EXE_NAME)
 
 CXX_FLAGS += -I $(INC_DIR)
 CXX_FLAGS += $(LDFLAGS)
 CXX_FLAGS += -o $(BIN_DIR)/$(EXE_NAME)
 
-$(EXE_NAME):
+KDIR = /lib/modules/$(shell uname -r)/build
+KMOD_DIR = $(PWD)/kmod
+
+CONFIG_DIR = $(PWD)/config
+CONF_FILES = $(CONFIG_DIR)/ca.truststore $(CONFIG_DIR)/qrng.properties $(CONFIG_DIR)/token.keystore  
+
+all: $(EXECUTABLE) KMODULE
+
+$(EXECUTABLE):
 	mkdir -p $(BIN_DIR)
-	cp $(DATA_DIR)/* $(BIN_DIR)
 	g++ $(CXX_FLAGS) $(SRC_FILES)
+
+
+KMODULE:
+	make -C $(KDIR) M=$(KMOD_DIR)
+
+
+install: $(EXECUTABLE) $(CONF_FILES)
+	cp $(CONFIG_DIR)/* $(BIN_DIR)
+
+clean:
+	make -C $(KDIR) M=$(KMOD_DIR) clean
+	rm -rf $(PWD)/bin
