@@ -9,7 +9,7 @@
 #include <linux/poll.h>
 #include <linux/device.h> 
 
-#define DEVICE_NAME "qrng"
+#define DEVICE_NAME "qrandom0"
 
 static ssize_t qrng_read_iter(struct kiocb*, struct iov_iter*);
 static ssize_t qrng_write_iter(struct kiocb*, struct iov_iter*);
