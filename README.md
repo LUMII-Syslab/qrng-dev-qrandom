@@ -11,7 +11,7 @@ For more information visit [qrng.lumii.lv](https://qrng.lumii.lv/).
 
 ## Diagram
 
-[](./diagram.png)
+![](./diagram.png)
 
 ## Prerequisites
 
