@@ -9,6 +9,10 @@ Systemd provides a system and service manager that runs as PID 1 and starts the 
 
 For more information visit [qrng.lumii.lv](https://qrng.lumii.lv/).
 
+## Diagram
+
+[](./diagram.png)
+
 ## Prerequisites
 
 To use QRNG web service 3 files are required to be placed into `./config` directory:
