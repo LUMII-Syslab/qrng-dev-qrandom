@@ -1,6 +1,6 @@
 PWD := $(CURDIR)
 
-SRC_DIR = $(PWD)/src
+SRC_DIR = $(PWD)/u-src
 SRC_FILES = $(wildcard $(SRC_DIR)/*.cpp)
 
 INC_DIR = $(PWD)/include
@@ -17,7 +17,7 @@ CXX_FLAGS += $(LDFLAGS)
 CXX_FLAGS += -o $(BIN_DIR)/$(EXE_NAME)
 
 KDIR = /lib/modules/$(shell uname -r)/build
-KMOD_DIR = $(PWD)/kmod
+KMOD_DIR = $(PWD)/k-src
 
 CONFIG_DIR = $(PWD)/config
 CONF_FILES = $(CONFIG_DIR)/ca.truststore $(CONFIG_DIR)/qrng.properties $(CONFIG_DIR)/token.keystore  
