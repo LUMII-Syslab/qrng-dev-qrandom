@@ -36,28 +36,19 @@ static int major;
 static struct class* cls;
 
 static int __init qrng_init(void) {
-    // major = register_chrdev(0, DEVICE_NAME, &qrng_fops);
+    major = register_chrdev(0, DEVICE_NAME, &qrng_fops);
 
-    // if (major < 0) {
-    //     printk(KERN_ALERT "QRNG service load failed\n");
-    //     return major;
-    // }
+    if (major < 0) {
+        printk(KERN_ALERT "QRNG service load failed\n");
+        return major;
+    }
 
-    // printk(KERN_INFO "QRNG service module has been loaded: %d\n", major);
+    printk(KERN_INFO "QRNG service module has been loaded: %d\n", major);
 
-    // cls = class_create(THIS_MODULE, DEVICE_NAME);
-    // device_create(cls, NULL, MKDEV(major,0),NULL,DEVICE_NAME);
+    cls = class_create(THIS_MODULE, DEVICE_NAME);
+    device_create(cls, NULL, MKDEV(major,0),NULL,DEVICE_NAME);
 
-    // pr_info("Device created on /dev/%s\n", DEVICE_NAME);
-
-    struct subprocess_info *sub_info;
-    char *argv[] = { "/usr/bin/alacritty", NULL };
-    static char *envp[] = { NULL };
-
-    sub_info = call_usermodehelper_setup( argv[0], argv, envp, GFP_ATOMIC,NULL,NULL,NULL);
-    if (sub_info == NULL) return -ENOMEM;
-
-    return call_usermodehelper_exec( sub_info, UMH_WAIT_PROC);
+    pr_info("Device created on /dev/%s\n", DEVICE_NAME);
 
     return 0;
 }
