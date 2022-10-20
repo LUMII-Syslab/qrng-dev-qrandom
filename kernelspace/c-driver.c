@@ -17,18 +17,26 @@
 
 static u8 qrng_buffer[BUFF_TOTAL];
 static bool buff_is_renewed[BLOCK_CNT];
-static int  buff_it;
+static int  buff_read_it; // iterates [0;BUFF_TOTAL)
+static int  block_write_it; // iterates blocks [0:BLOCK_CNT)
+static int  buff_unrenewed_cnt = BLOCK_CNT;
 
 static bool qrng_ready(void) {
-    int buff_id = buff_it/BUFF_BLOCK;
+    if(buff_read_it%BUFF_BLOCK) return true;
+    int buff_id = buff_read_it/BUFF_BLOCK;
     return buff_is_renewed[buff_id];
 }
 
 static ssize_t get_random_byte(u8* b) {
-    if(!qrng_ready()) return 0;
-    *b = qrng_buffer[buff_it];
-    qrng_buffer[buff_it] = 0;
-    buff_it = (buff_it+1)%BUFF_TOTAL;
+    int buff_id = buff_read_it/BUFF_BLOCK;
+    if(buff_read_it%BUFF_BLOCK==0) {
+        if(!buff_is_renewed[buff_id]) return 0;
+        buff_unrenewed_cnt--;
+        buff_is_renewed[buff_id] = false;
+    }
+    *b = qrng_buffer[buff_read_it];
+    qrng_buffer[buff_read_it] = 0;
+    buff_read_it = (buff_read_it+1)%BUFF_TOTAL;
     return 1;
 }
 
@@ -60,7 +68,7 @@ const struct file_operations qrng_fops = {
     .read_iter = qrng_read_iter,
     .write_iter = qrng_write_iter,
     .poll = qrng_poll,
-    .unlocked_ioctl = qrng_ioctl,
+    //.unlocked_ioctl = qrng_ioctl,
     .fasync = qrng_fasync,
 
     /* non-implemented functions */
@@ -109,20 +117,28 @@ static ssize_t qrng_read_iter(struct kiocb* kiocb, struct iov_iter* iter) {
 }
 
 static ssize_t qrng_write_iter(struct kiocb*, struct iov_iter*) {
-   printk(KERN_INFO "Sorry, QRNG service is read only\n");
-   return -EFAULT;
+    ssize_t ret = 0;
+    size_t copied;
+
+    if(unlikely(!iov_iter_count(iter)))
+        return 0;
+
+    if(buff_unrenewed_cnt==0) return -EFAULT;
+    
+    while(iov_iter_count(iter)>=BUFF_BLOCK) {
+        copied = copy_from_iter(qrng_buffer[block_write_it*BLOCK_SIZE], sizeof(block), iter);
+        block_write_it = (block_write_it+1)%BLOCK_CNT;
+        ret += copied;
+    }
+    
+    return ret ? ret : -EFAULT;
 }
 
 static __poll_t qrng_poll(struct file* file, poll_table* wait) {
-    return 0;
-}
-
-static long qrng_ioctl(struct file* f, unsigned int cmd, unsigned long arg)
-{
-    switch(cmd) {
-        default:
-        return -EINVAL;
-    }
+    __poll_t res = 0
+    if(buff_unrenewed_cnt<BUFF_BLOCK) res |= EPOLLOUT;
+    if(qrng_ready()) res |= POLLIN|EPOLLRDNORM;
+    return res;
 }
 
 
