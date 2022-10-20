@@ -8,6 +8,7 @@
 #include <linux/slab.h>
 #include <linux/poll.h>
 #include <linux/device.h> 
+#include <linux/uio.h>
 
 #define DEVICE_NAME "qrandom0"
 
@@ -54,12 +55,38 @@ static int __init qrng_init(void) {
 }
 
 static void __exit qrng_exit(void) {
+    device_destroy(cls, MKDEV(major, 0)); 
+    class_destroy(cls); 
+
     unregister_chrdev(major, DEVICE_NAME);
+
     printk(KERN_INFO "QRNG service module has been unloaded\n");
 }
 
+static bool qrng_ready(void) {
+    return true;
+}
+
+static ssize_t get_random_bytes_qrng(struct iov_iter* iter) {
+    size_t ret = 0;
+
+    if(unlikely(!iov_iter_count(iter)))
+        return 0;
+
+    while(iov_iter_count(iter)) {
+        uint x = 69;
+        ret += copy_to_iter(&x,sizeof(x),iter);
+    }
+    
+    return ret ? ret : -EFAULT;
+}
+
 static ssize_t qrng_read_iter(struct kiocb* kiocb, struct iov_iter* iter) {
-    return 69;
+    if(!qrng_ready())
+        return -EAGAIN;
+    
+
+    return get_random_bytes_qrng(iter);
 }
 
 static ssize_t qrng_write_iter(struct kiocb*, struct iov_iter*) {
