@@ -1,1 +1,0 @@
-make && LD_LIBRARY_PATH=./lib ./exe/test.out && rm -r exe
