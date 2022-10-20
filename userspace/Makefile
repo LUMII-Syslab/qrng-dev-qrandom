@@ -16,17 +16,13 @@ CXX_FLAGS += -I $(INC_DIR)
 CXX_FLAGS += $(LDFLAGS)
 CXX_FLAGS += -o $(BIN_DIR)/$(EXE_NAME)
 
-CONFIG_DIR = $(PWD)/config
-CONF_FILES = $(CONFIG_DIR)/ca.truststore $(CONFIG_DIR)/qrng.properties $(CONFIG_DIR)/token.keystore  
-
 all: $(EXECUTABLE)
 
-$(EXECUTABLE):
+$(EXECUTABLE): $(SRC_FILES)
 	mkdir -p $(BIN_DIR)
 	g++ $(CXX_FLAGS) $(SRC_FILES)
 
-install: $(EXECUTABLE) $(CONF_FILES)
-	cp $(CONFIG_DIR)/* $(BIN_DIR)
+install: $(EXECUTABLE)
 
 clean:
 	rm -rf $(PWD)/bin

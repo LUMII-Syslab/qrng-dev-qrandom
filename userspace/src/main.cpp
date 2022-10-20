@@ -1,38 +1,31 @@
-#include <stdlib.h>
-#include <stdio.h>
+// #include <stdio.h>
+// #include <string.h>
+// #include <unistd.h>
+// #include <poll.h>
+// #define TIMEOUT 500 // poll timeout in ms
 
-#include "qrng.h"
+// int main() {
+//     char name[255];
+//     int counter = 0;
 
-int main(int argc, char **argv) {
-    graal_isolatethread_t *thread = NULL;
+//     pollfd qrngp = {};
+//     qrngp.fd = 0;
+//     qrngp.events = POLLIN;
 
-    if (graal_create_isolate(NULL, NULL/* &isolate */, &thread) != 0) {
-        fprintf(stderr, "graal_create_isolate error\n");
-        return 1;
-    }
+//     printf("Type in your name: \n");
 
-    qrng_connect(thread);
-    
-    char* s = qrng_get_main_executable(thread);
-    qrng_free_result(thread, s);
-
-    char buf[10];
-    s = qrng_get_random_bytes(thread, buf, 10);
-    if (s==NULL) {
-        for (int i=0; i<10; i++)
-            printf("%d ",buf[i]);
-    }
-    else {
-        printf("error: [%s]\n", s);
-    }
-    qrng_free_result(thread, s);
-    
+//     while(1) {
+//         r = poll(&qrngp,1,TIMEOUT)
+//         if(r<0)
+//         {
+            
+//         }
+//         else if(r==0)
+//         {
+//             printf("Poll timed out\n");
+//         }
+//     }
+//     printf("%d %d %d\n", fp.events, fp.fd, fp.revents);
 
 
-    if (graal_detach_thread(thread) != 0) {
-        fprintf(stderr, "graal_detach_thread error\n");
-        return 1;
-    }
-    
-    return 0;
-}
+// }

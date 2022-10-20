@@ -1,0 +1,1 @@
+ca.truststore (the root CA certificate used to sign the QRNG server HTTPS certificate and client sertificates)
