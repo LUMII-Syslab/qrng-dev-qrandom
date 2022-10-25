@@ -1,31 +1,20 @@
-// #include <stdio.h>
-// #include <string.h>
-// #include <unistd.h>
-// #include <poll.h>
-// #define TIMEOUT 500 // poll timeout in ms
+#include <stdlib.h>
+#include <stdio.h>
+#include <poll.h>
+#include "prng.hpp"
+#include "qrng.hpp"
 
-// int main() {
-//     char name[255];
-//     int counter = 0;
+RNG* rng; // random num gen used to write /dev/qrandom0
 
-//     pollfd qrngp = {};
-//     qrngp.fd = 0;
-//     qrngp.events = POLLIN;
+int main(int argc, char **argv) {
+    rng = new PRNG(); // can be swapped out for QRNG
 
-//     printf("Type in your name: \n");
+    char b_arr[1000];
+    int b_cnt = sizeof(b_arr)/sizeof(b_arr[0]);
+    rng->fetch_bytes(b_arr,b_cnt);
 
-//     while(1) {
-//         r = poll(&qrngp,1,TIMEOUT)
-//         if(r<0)
-//         {
-            
-//         }
-//         else if(r==0)
-//         {
-//             printf("Poll timed out\n");
-//         }
-//     }
-//     printf("%d %d %d\n", fp.events, fp.fd, fp.revents);
+    for(int i=0;i<b_cnt;i++)
+        printf("%d ", static_cast<unsigned char>(b_arr[i]));
 
-
-// }
+    return 0;
+}
