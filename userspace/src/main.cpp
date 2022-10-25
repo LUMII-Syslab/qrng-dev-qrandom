@@ -9,7 +9,7 @@
 #include "qrng.hpp"
 
 #define DEVICE_PATH "/dev/qrandom0"
-#define BLOCK_SZ  1000 // must match the value defined in kernelspace
+#define BLOCK_SZ  256 // must match the value defined in kernelspace
 
 RNG* rng; // random num gen used to write /dev/qrandom0
 
@@ -47,6 +47,7 @@ int main(int argc, char **argv) {
                 printf("write failed with errno %d\n", errno);
                 return errno;
             }
+            printf("%d bytes written to %s\n",wres,DEVICE_PATH);
         } else {
             printf("poll timed out\n");
         }

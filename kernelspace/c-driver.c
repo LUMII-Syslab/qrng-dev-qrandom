@@ -9,13 +9,16 @@
 #include <linux/poll.h>
 #include <linux/device.h> 
 #include <linux/uio.h>
+#include <linux/mutex.h>
 
-#define QRNG_DEBUG
+//#define QRNG_DEBUG
 
 #define DEVICE_NAME "qrandom0"
-#define RNG_BLOCK_SZ  (size_t)1000 // requested byte count from qrng.lumii.lv
-#define RNG_BLOCK_CNT 10
+#define RNG_BLOCK_SZ  (size_t)256 // requested byte count from qrng.lumii.lv
+#define RNG_BLOCK_CNT 4
 #define RNG_TOTAL (RNG_BLOCK_SZ*RNG_BLOCK_CNT)
+
+static DEFINE_MUTEX(mymutex); // can be heavily optimized
 
 static u8 qrng_buffer[RNG_TOTAL];
 static bool buff_is_renewed[RNG_BLOCK_CNT];
@@ -24,24 +27,79 @@ static int  block_write_it; // iterates blocks [0:RNG_BLOCK_CNT)
 static int  buff_ready_cnt = 0;
 
 static bool qrng_ready(void) {
-    int buff_id;
+    int buff_id = buff_read_it/RNG_BLOCK_SZ;
+    bool res = false;
+    int ret = mutex_trylock(&mymutex);
+    if(ret!=0){
+        
+        if(mutex_is_locked(&mymutex)==0) {
+            pr_info("QRNG: failed to lock mutex in qrng_ready\n");
+            return false;
+        }
 
-    if(buff_read_it%RNG_BLOCK_SZ) return true;
-    buff_id = buff_read_it/RNG_BLOCK_SZ;
-    return buff_is_renewed[buff_id];
+        if(buff_read_it%RNG_BLOCK_SZ) res = true;
+        else res = buff_is_renewed[buff_id];
+
+        mutex_unlock(&mymutex);
+        return res;
+    }else {
+        pr_info("QRNG: failed to lock mutex in qrng_ready\n");
+        return false;
+    }
+    return 0;
 }
 
 static ssize_t get_random_byte(u8* b) {
     int buff_id = buff_read_it/RNG_BLOCK_SZ;
-    if(buff_read_it%RNG_BLOCK_SZ==0) {
-        if(!buff_is_renewed[buff_id]) return 0;
-        buff_ready_cnt--;
-        buff_is_renewed[buff_id] = false;
+    int ret = mutex_trylock(&mymutex);
+    if(ret!=0){
+        if(mutex_is_locked(&mymutex)==0) {
+            pr_info("QRNG: failed to lock mutex in get_random_byte\n");
+            return 0;
+        }
+        if(buff_read_it%RNG_BLOCK_SZ==0) {
+            if(!buff_is_renewed[buff_id])
+            {
+                mutex_unlock(&mymutex);
+                return 0;
+            }
+            buff_ready_cnt--;
+            buff_is_renewed[buff_id] = false;
+        }
+        *b = qrng_buffer[buff_read_it];
+        qrng_buffer[buff_read_it] = 0;
+        buff_read_it = (buff_read_it+1)%RNG_TOTAL;
+        mutex_unlock(&mymutex); 
+        return 1;
+    }else {
+        pr_info("QRNG: failed to lock mutex in get_random_byte\n");
+        return 0;
     }
-    *b = qrng_buffer[buff_read_it];
-    qrng_buffer[buff_read_it] = 0;
-    buff_read_it = (buff_read_it+1)%RNG_TOTAL;
-    return 1;
+    return 0;
+}
+
+static ssize_t write_random_bytes_qrng(struct iov_iter* iter) {
+    void* block_addr = &qrng_buffer[RNG_BLOCK_SZ*block_write_it];
+    size_t copied;
+
+    int ret = mutex_trylock(&mymutex);
+    if(ret!=0){
+        if(mutex_is_locked(&mymutex)==0) {
+            pr_info("QRNG: failed to lock mutex in write_random_bytes_qrng\n");
+            return 0;
+        }
+        copied = copy_from_iter(block_addr, RNG_BLOCK_SZ, iter);
+        buff_is_renewed[block_write_it] = 1;
+        block_write_it = (block_write_it+1)%RNG_BLOCK_CNT;
+        buff_ready_cnt++;
+
+        mutex_unlock(&mymutex); 
+        return copied;
+    }else {
+        pr_info("QRNG: failed to lock mutex in write_random_bytes_qrng\n");
+        return 0;
+    }
+    return 0;
 }
 
 static ssize_t get_random_bytes_qrng(struct iov_iter* iter) {
@@ -138,19 +196,13 @@ static ssize_t qrng_write_iter(struct kiocb*, struct iov_iter* iter) {
     #endif
 
     while(iov_iter_count(iter)>=RNG_BLOCK_SZ&&buff_ready_cnt<RNG_BLOCK_CNT) {
-        void* block_addr = &qrng_buffer[RNG_BLOCK_SZ*block_write_it];
-        copied = copy_from_iter(block_addr, RNG_BLOCK_SZ, iter);
-    #ifdef QRNG_DEBUG
-        pr_info("QRNG: write_iter copied %d\n",copied);
-    #endif
-        if(copied==RNG_BLOCK_SZ)
-        {
-            ret += copied;
-            buff_is_renewed[block_write_it] = 1;
-            block_write_it = (block_write_it+1)%RNG_BLOCK_CNT;
-            buff_ready_cnt++;
-        }
+        copied = write_random_bytes_qrng(iter);
+        ret += copied;
+        #ifdef QRNG_DEBUG
+            pr_info("QRNG: write_iter copied %d\n",copied);
+        #endif
     }
+
     #ifdef QRNG_DEBUG
         pr_info("QRNG: write_iter ret %d\n",ret);
     #endif
@@ -159,9 +211,6 @@ static ssize_t qrng_write_iter(struct kiocb*, struct iov_iter* iter) {
 }
 
 static __poll_t qrng_poll(struct file* file, poll_table* wait) {
-    #ifdef QRNG_DEBUG
-        pr_info("QRNG: poll function called\n");
-    #endif
     __poll_t res = 0;
     if(buff_ready_cnt<RNG_BLOCK_CNT) res |= EPOLLOUT;  // writing is now possible
     if(qrng_ready()) res |= POLLIN|EPOLLRDNORM;     // there is data to read.
