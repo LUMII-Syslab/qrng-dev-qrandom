@@ -9,7 +9,7 @@
 #include "qrng.hpp"
 
 #define DEVICE_PATH "/dev/qrandom0"
-#define BUFF_BLOCK  100 // must match the value defined in kernelspace
+#define BLOCK_SZ  1000 // must match the value defined in kernelspace
 
 RNG* rng; // random num gen used to write /dev/qrandom0
 
@@ -40,8 +40,8 @@ int main(int argc, char **argv) {
         if(qrngpoll.revents & POLLOUT) {
             qrngpoll.revents = 0;
             printf("%s is ready for writing\n", DEVICE_PATH);
-            unsigned char arr[BUFF_BLOCK];
-            for(int i=0;i<BUFF_BLOCK;i++) arr[i] = i;
+            char arr[BLOCK_SZ];
+            rng->fetch_bytes(arr,BLOCK_SZ);
             int wres = write(fd,arr,sizeof(arr));
             if(wres<0) {
                 printf("write failed with errno %d\n", errno);

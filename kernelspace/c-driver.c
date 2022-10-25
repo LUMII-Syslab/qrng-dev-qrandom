@@ -13,34 +13,34 @@
 #define QRNG_DEBUG
 
 #define DEVICE_NAME "qrandom0"
-#define BUFF_BLOCK  100 // requested byte count from qrng.lumii.lv
-#define BLOCK_CNT 4
-#define BUFF_TOTAL (BUFF_BLOCK*BLOCK_CNT)
+#define RNG_BLOCK_SZ  (size_t)1000 // requested byte count from qrng.lumii.lv
+#define RNG_BLOCK_CNT 10
+#define RNG_TOTAL (RNG_BLOCK_SZ*RNG_BLOCK_CNT)
 
-static u8 qrng_buffer[BUFF_TOTAL];
-static bool buff_is_renewed[BLOCK_CNT];
-static int  buff_read_it; // iterates [0;BUFF_TOTAL)
-static int  block_write_it; // iterates blocks [0:BLOCK_CNT)
+static u8 qrng_buffer[RNG_TOTAL];
+static bool buff_is_renewed[RNG_BLOCK_CNT];
+static int  buff_read_it; // iterates [0;RNG_TOTAL)
+static int  block_write_it; // iterates blocks [0:RNG_BLOCK_CNT)
 static int  buff_ready_cnt = 0;
 
 static bool qrng_ready(void) {
     int buff_id;
 
-    if(buff_read_it%BUFF_BLOCK) return true;
-    buff_id = buff_read_it/BUFF_BLOCK;
+    if(buff_read_it%RNG_BLOCK_SZ) return true;
+    buff_id = buff_read_it/RNG_BLOCK_SZ;
     return buff_is_renewed[buff_id];
 }
 
 static ssize_t get_random_byte(u8* b) {
-    int buff_id = buff_read_it/BUFF_BLOCK;
-    if(buff_read_it%BUFF_BLOCK==0) {
+    int buff_id = buff_read_it/RNG_BLOCK_SZ;
+    if(buff_read_it%RNG_BLOCK_SZ==0) {
         if(!buff_is_renewed[buff_id]) return 0;
         buff_ready_cnt--;
         buff_is_renewed[buff_id] = false;
     }
     *b = qrng_buffer[buff_read_it];
     qrng_buffer[buff_read_it] = 0;
-    buff_read_it = (buff_read_it+1)%BUFF_TOTAL;
+    buff_read_it = (buff_read_it+1)%RNG_TOTAL;
     return 1;
 }
 
@@ -134,17 +134,20 @@ static ssize_t qrng_write_iter(struct kiocb*, struct iov_iter* iter) {
     #ifdef QRNG_DEBUG
         pr_info("QRNG: write_iter function called\n");
         pr_info("QRNG: write_iter iov_iter_count %d\n",iov_iter_count(iter));
+        pr_info("QRNG: write_iter ready %d\n",buff_ready_cnt);
     #endif
 
-    while(iov_iter_count(iter)>=BUFF_BLOCK&&buff_ready_cnt<BLOCK_CNT) {
-        size_t block_sz = sizeof(qrng_buffer[0])*BLOCK_SIZE;
-        void* block_addr = &qrng_buffer[BLOCK_SIZE*block_write_it];
-        copied = copy_from_iter(block_addr, block_sz, iter);
-        if(copied==BUFF_BLOCK)
+    while(iov_iter_count(iter)>=RNG_BLOCK_SZ&&buff_ready_cnt<RNG_BLOCK_CNT) {
+        void* block_addr = &qrng_buffer[RNG_BLOCK_SZ*block_write_it];
+        copied = copy_from_iter(block_addr, RNG_BLOCK_SZ, iter);
+    #ifdef QRNG_DEBUG
+        pr_info("QRNG: write_iter copied %d\n",copied);
+    #endif
+        if(copied==RNG_BLOCK_SZ)
         {
             ret += copied;
             buff_is_renewed[block_write_it] = 1;
-            block_write_it = (block_write_it+1)%BLOCK_CNT;
+            block_write_it = (block_write_it+1)%RNG_BLOCK_CNT;
             buff_ready_cnt++;
         }
     }
@@ -160,7 +163,7 @@ static __poll_t qrng_poll(struct file* file, poll_table* wait) {
         pr_info("QRNG: poll function called\n");
     #endif
     __poll_t res = 0;
-    if(buff_ready_cnt<BUFF_BLOCK) res |= EPOLLOUT;  // writing is now possible
+    if(buff_ready_cnt<RNG_BLOCK_CNT) res |= EPOLLOUT;  // writing is now possible
     if(qrng_ready()) res |= POLLIN|EPOLLRDNORM;     // there is data to read.
     return res;
 }
