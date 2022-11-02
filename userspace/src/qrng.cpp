@@ -14,13 +14,14 @@ QRNG::~QRNG() {
     }
 }
 
-void QRNG::fetch_bytes(char byte_arr[], int count) {
-    char* s = qrng_get_main_executable(thread);
-    qrng_free_result(thread, s);
+void QRNG::fetch_bytes(byte arr[], int cnt) {
+    return;
+    // char* s = qrng_get_main_executable(thread);
+    // qrng_free_result(thread, s);
 
-    s = qrng_get_random_bytes(thread, byte_arr, count);
-    if (s!=NULL) 
-        printf("error: [%s]\n", s);
+    // s = qrng_get_random_bytes(thread, arr, cnt);
+    // if (s!=NULL) 
+    //     printf("error: [%s]\n", s);
     
-    qrng_free_result(thread, s);
+    // qrng_free_result(thread, s);
 }

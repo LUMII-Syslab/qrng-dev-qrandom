@@ -9,5 +9,5 @@ private:
 public:
     PRNG();
     ~PRNG();
-    void fetch_bytes(char b_arr[], int b_cnt);
+    void fetch_bytes(byte arr[], int cnt);
 };

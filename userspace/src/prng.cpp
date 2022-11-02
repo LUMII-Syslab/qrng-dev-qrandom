@@ -14,13 +14,15 @@ PRNG::~PRNG() {
     delete this->mt;
 }
 
-void PRNG::fetch_bytes(char b_arr[], int b_cnt) {
-    while(b_cnt>0){
+void PRNG::fetch_bytes(byte arr[], int cnt) {
+    while(cnt>0){
         int rnd = this->mt->operator()();
-        char tmp[sizeof(rnd)];
+        
+        byte tmp[sizeof(rnd)]; // because int contains multiple bytes
         memcpy(tmp,&rnd,sizeof(rnd));
+
         int i=sizeof(rnd);
-        while(b_cnt&&i)
-            b_arr[--b_cnt] = tmp[--i];
+        while(cnt&&i)
+            arr[--cnt] = tmp[--i];
     }
 }
