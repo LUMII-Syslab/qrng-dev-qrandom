@@ -13,16 +13,20 @@
 
 RNG* rng; // random num gen used to write /dev/qrandom0
 
+void write_random_bytes(int fd, RNG* rng) {
+    byte bytes[BLOCK_SZ];
+    
+    rng->fetch_bytes(bytes,BLOCK_SZ);
+    int wres = write(fd,bytes,sizeof(bytes));
+
+    if(wres<0) {
+        printf("write failed with errno %d\n", errno);
+        return errno;
+    }
+}
+
 int main(int argc, char **argv) {
     rng = new PRNG(); // can be swapped out for QRNG
-
-    char b_arr[10];
-    int b_cnt = sizeof(b_arr)/sizeof(b_arr[0]);
-    rng->fetch_bytes(b_arr,b_cnt);
-
-    for(int i=0;i<b_cnt;i++)
-        printf("%d ", static_cast<unsigned char>(b_arr[i]));
-    printf("\n");
 
     int fd = open(DEVICE_PATH, O_RDWR);
     if(fd<0) {
@@ -40,13 +44,6 @@ int main(int argc, char **argv) {
         if(qrngpoll.revents & POLLOUT) {
             qrngpoll.revents = 0;
             printf("%s is ready for writing\n", DEVICE_PATH);
-            char arr[BLOCK_SZ];
-            rng->fetch_bytes(arr,BLOCK_SZ);
-            int wres = write(fd,arr,sizeof(arr));
-            if(wres<0) {
-                printf("write failed with errno %d\n", errno);
-                return errno;
-            }
             printf("%d bytes written to %s\n",wres,DEVICE_PATH);
         } else {
             printf("poll timed out\n");
