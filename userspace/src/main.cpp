@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <unistd.h>
 
+#include "rng.hpp"
 #include "prng.hpp"
 #include "qrng.hpp"
 
@@ -21,8 +22,8 @@ void write_random_bytes(int fd, RNG* rng) {
 
     if(wres<0) {
         printf("write failed with errno %d\n", errno);
-        return errno;
-    }
+    }else
+        printf("%d bytes written to %s\n",wres,DEVICE_PATH);
 }
 
 int main(int argc, char **argv) {
@@ -44,7 +45,6 @@ int main(int argc, char **argv) {
         if(qrngpoll.revents & POLLOUT) {
             qrngpoll.revents = 0;
             printf("%s is ready for writing\n", DEVICE_PATH);
-            printf("%d bytes written to %s\n",wres,DEVICE_PATH);
         } else {
             printf("poll timed out\n");
         }
