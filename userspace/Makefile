@@ -1,26 +1,32 @@
-PWD := $(CURDIR)
+CXX = g++
+CXXFLAGS += -I external
+CXXFLAGS += -I src
 
-SRC_DIR = $(PWD)/src
-SRC_FILES = $(wildcard $(SRC_DIR)/*.cpp)
-
-INC_DIR = $(SRC_DIR)
-INC_FILES = $(wildcard $(INC_DIR)/*.hpp)
-
-BUILD_DIR = $(PWD)/build
+BDIR = build
+$(shell mkdir -p $(BDIR)) # create the directory if it doesn't exist
 
 EXE_NAME = qrng.out
-EXECUTABLE = $(BUILD_DIR)/$(EXE_NAME)
+EXECUTABLE = $(BDIR)/$(EXE_NAME)
 
-CXX_FLAGS += -I $(INC_DIR)
-CXX_FLAGS += -l qrng
+OBJS += $(BDIR)/main.o
+OBJS += $(BDIR)/prng.o
+OBJS += $(BDIR)/qrng.o
+OBJS += $(BDIR)/loguru.o
 
-all: $(EXECUTABLE)
+$(EXECUTABLE): $(OBJS)
+	g++ -o $@ -l qrng $^
 
-$(EXECUTABLE): $(SRC_FILES) $(INC_FILES)
-	mkdir -p $(BUILD_DIR)
-	g++ $(CXX_FLAGS) $(SRC_FILES) -o $@
+$(BDIR)/main.o: src/main.cpp
+	g++ -c $(CXXFLAGS) -o $@ src/main.cpp
 
-install: $(EXECUTABLE)
+$(BDIR)/prng.o: src/prng.cpp src/prng.hpp src/rng.hpp
+	g++ -c $(CXXFLAGS) -o $@ src/prng.cpp
 
-clean:
-	rm -rf $(PWD)/bin
+$(BDIR)/qrng.o: src/prng.cpp src/prng.hpp src/rng.hpp
+	g++ -c $(CXXFLAGS) -o $@ src/qrng.cpp
+
+$(BDIR)/loguru.o: external/loguru/loguru.cpp external/loguru/loguru.hpp
+	g++ -c $(CXXFLAGS) -o $@ external/loguru/loguru.cpp
+
+run: $(EXECUTABLE)
+	$(EXECUTABLE)

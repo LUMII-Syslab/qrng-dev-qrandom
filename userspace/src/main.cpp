@@ -5,6 +5,8 @@
 #include <errno.h>
 #include <unistd.h>
 
+#include "loguru/loguru.hpp"
+
 #include "rng.hpp"
 #include "prng.hpp"
 #include "qrng.hpp"
@@ -18,6 +20,9 @@ void write_random_bytes(int fd, RNG* rng) {
     byte bytes[BLOCK_SZ];
     
     rng->fetch_bytes(bytes,BLOCK_SZ);
+    printf("writing bytes ");
+    for(int i=0;i<BLOCK_SZ;i++) printf("%d ", bytes[i]);
+    printf("\n");
     int wres = write(fd,bytes,sizeof(bytes));
 
     if(wres<0) {
@@ -28,6 +33,9 @@ void write_random_bytes(int fd, RNG* rng) {
 }
 
 int main(int argc, char **argv) {
+    loguru::init(argc,argv);
+    loguru::add_file("qrng.log", loguru::FileMode::Truncate, loguru::NamedVerbosity::Verbosity_INFO);
+
     rng = new PRNG(); // can be swapped out for QRNG
 
     int fd = open(DEVICE_PATH, O_RDWR);
@@ -46,6 +54,7 @@ int main(int argc, char **argv) {
         if(qrngpoll.revents & POLLOUT) {
             qrngpoll.revents = 0;
             printf("%s is ready for writing\n", DEVICE_PATH);
+            write_random_bytes(fd,rng);
         } else {
             printf("poll timed out\n");
         }

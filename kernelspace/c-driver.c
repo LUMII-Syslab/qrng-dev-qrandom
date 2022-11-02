@@ -178,6 +178,8 @@ static ssize_t qrng_read_iter(struct kiocb* kiocb, struct iov_iter* iter) {
     if(!qrng_ready())
         return -EAGAIN;
 
+    printk(KERN_INFO "QRNG read iter size: %d\n", (int)iov_iter_count(iter));
+
     return get_random_bytes_qrng(iter);
 }
 
