@@ -22,6 +22,7 @@ void write_random_bytes(int fd, RNG* rng) {
 
     if(wres<0) {
         printf("write failed with errno %d\n", errno);
+        exit(1);
     }else
         printf("%d bytes written to %s\n",wres,DEVICE_PATH);
 }
