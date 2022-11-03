@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
 
     while(1) {
         LOG_F(INFO,"polling for POLLOUT event");
-        poll(&qrngpoll,1,-1); // poll for a second and then poll again
+        int r = poll(&qrngpoll,1,-1); // poll single file descriptor wihtout timeout
         if(qrngpoll.revents & POLLOUT) {
             qrngpoll.revents = 0;
 

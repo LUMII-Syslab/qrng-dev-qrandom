@@ -26,7 +26,8 @@ static int  buff_ready_cnt = 0;
 static bool qrng_ready = false;
 
 static DEFINE_MUTEX(buff_mutex);
-DECLARE_WAIT_QUEUE_HEAD (read_queue);
+DECLARE_WAIT_QUEUE_HEAD (read_queue); // for processes that want to read
+DECLARE_WAIT_QUEUE_HEAD (poll_queue); // for processes that might want to read or write
 
 static ssize_t get_random_byte(u8* b) {
     int ret;
@@ -45,9 +46,11 @@ static ssize_t get_random_byte(u8* b) {
             return 0;
         }
 
-        if(buff_read_it%RNG_BLOCK_SZ==0)
-            buff_ready_cnt--,
+        if(buff_read_it%RNG_BLOCK_SZ==0) {
+            buff_ready_cnt--;
+            wake_up_interruptible(&poll_queue);
             block_is_renewed[buff_read_it/RNG_BLOCK_SZ] = false;
+        }
 
         *b = qrng_buffer[buff_read_it];
         qrng_buffer[buff_read_it] = 0;
@@ -55,8 +58,10 @@ static ssize_t get_random_byte(u8* b) {
         buff_read_it = (buff_read_it+1)%RNG_TOTAL;
         if(buff_read_it%RNG_BLOCK_SZ==0){
             qrng_ready = block_is_renewed[buff_read_it/RNG_BLOCK_SZ];
-            if(qrng_ready)
+            if(qrng_ready) {
                 wake_up_interruptible(&read_queue);
+            }
+            wake_up_interruptible(&poll_queue);
         }
 
         mutex_unlock(&buff_mutex); 
@@ -87,6 +92,7 @@ static ssize_t write_random_bytes_qrng(struct iov_iter* iter) {
         if(qrng_ready==false&&(buff_read_it%RNG_BLOCK_SZ==0)&&(buff_read_it/RNG_BLOCK_SZ==block_write_it))
         {
             wake_up_interruptible(&read_queue);
+            wake_up_interruptible(&poll_queue);
             qrng_ready = true;
         }
 
@@ -211,6 +217,8 @@ static ssize_t qrng_write_iter(struct kiocb*, struct iov_iter* iter) {
 
 static __poll_t qrng_poll(struct file* file, poll_table* wait) {
     __poll_t res = 0;
+
+	poll_wait(file, &poll_queue, wait);
     
     if(buff_ready_cnt<RNG_BLOCK_CNT) res |= EPOLLOUT;  // writing is now possible
     if(qrng_ready) res |= POLLIN|EPOLLRDNORM;     // there is data to read.
