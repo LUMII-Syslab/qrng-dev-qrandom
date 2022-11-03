@@ -102,7 +102,7 @@ static ssize_t write_random_bytes_qrng(struct iov_iter* iter) {
     return 0;
 }
 
-static ssize_t get_random_bytes_qrng(struct iov_iter* iter) {
+static ssize_t get_random_bytes_qrng(struct iov_iter* iter, bool get_all) {
     size_t ret = 0;
 
     if(unlikely(!iov_iter_count(iter)))
@@ -112,11 +112,15 @@ static ssize_t get_random_bytes_qrng(struct iov_iter* iter) {
         u8 b;
         ssize_t r = get_random_byte(&b);
         if(r==0) {
-            pr_info("QRNG: waiting for qrng_ready to read %d bytes\n", (int)iov_iter_count(iter));
-            if( wait_event_interruptible(my_queue, qrng_ready) != 0 )
-                return -ERESTARTSYS;
-            pr_info("QRNG: received qrng_ready in get_random_bytes_qrng\n");
-            continue; 
+            if(get_all) {
+                pr_info("QRNG: waiting for qrng_ready to read %d bytes\n", (int)iov_iter_count(iter));
+                if( wait_event_interruptible(my_queue, qrng_ready) != 0 )
+                    return -ERESTARTSYS;
+                pr_info("QRNG: received qrng_ready in get_random_bytes_qrng\n");
+                continue; 
+            } else {
+                return ret;
+            }
         }
         ret += copy_to_iter(&b,sizeof(b),iter);
     }
@@ -177,8 +181,16 @@ static void __exit qrng_exit(void) {
 }
 
 static ssize_t qrng_read_iter(struct kiocb* kiocb, struct iov_iter* iter) {
+    bool nonblocking = false;
+
+    nonblocking |= (kiocb->ki_flags & (IOCB_NOWAIT | IOCB_NOIO));
+    nonblocking |= (kiocb->ki_filp->f_flags & O_NONBLOCK);
+
+    if (!qrng_ready&&nonblocking)
+        return -EAGAIN;
+
     printk(KERN_INFO "QRNG read iter size: %d\n", (int)iov_iter_count(iter));
-    return get_random_bytes_qrng(iter);
+    return get_random_bytes_qrng(iter, !nonblocking);
 }
 
 static ssize_t qrng_write_iter(struct kiocb*, struct iov_iter* iter) {
