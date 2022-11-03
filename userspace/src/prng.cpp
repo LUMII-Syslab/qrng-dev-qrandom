@@ -22,7 +22,7 @@ void PRNG::fetch_bytes(byte arr[], int cnt) {
         memcpy(tmp,&rnd,sizeof(rnd));
 
         int i=sizeof(rnd);
-        while(cnt&&i)
+        while(cnt>0&&i>0)
             arr[--cnt] = tmp[--i];
     }
 }

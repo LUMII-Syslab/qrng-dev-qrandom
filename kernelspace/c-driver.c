@@ -75,16 +75,19 @@ static ssize_t get_random_byte(u8* b) {
 
 
 static ssize_t write_random_bytes_qrng(struct iov_iter* iter) {
-    void* block_addr = &qrng_buffer[RNG_BLOCK_SZ*block_write_it];
+    void* block_addr;
     size_t copied;
-
+    
     int ret = mutex_trylock(&buff_mutex);
     if(ret!=0){
         if(mutex_is_locked(&buff_mutex)==0) {
             pr_info("QRNG: failed to lock mutex in write_random_bytes_qrng\n");
             return 0;
         }
+        
+        block_addr = &qrng_buffer[RNG_BLOCK_SZ*block_write_it];
         copied = copy_from_iter(block_addr, RNG_BLOCK_SZ, iter);
+        
         pr_info("QRNG: copied %d bytes in write_random_bytes_qrng\n", (int)copied);
         block_is_renewed[block_write_it] = true;
 
@@ -195,7 +198,7 @@ static ssize_t qrng_read_iter(struct kiocb* kiocb, struct iov_iter* iter) {
     if (!qrng_ready&&nonblocking)
         return -EAGAIN;
 
-    printk(KERN_INFO "QRNG read iter size: %d\n", (int)iov_iter_count(iter));
+    // printk(KERN_INFO "QRNG read iter size: %d\n", (int)iov_iter_count(iter));
     return get_random_bytes_qrng(iter, !nonblocking);
 }
 
