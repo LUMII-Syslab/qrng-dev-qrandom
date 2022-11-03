@@ -54,15 +54,13 @@ int main(int argc, char **argv) {
 
     while(1) {
         LOG_F(INFO,"polling for POLLOUT event");
-        poll(&qrngpoll,1,10000); // poll for 10 seconds and then poll again
+        poll(&qrngpoll,1,-1); // poll for a second and then poll again
         if(qrngpoll.revents & POLLOUT) {
             qrngpoll.revents = 0;
 
             LOG_F(INFO, "random bytes should be written");
 
             write_random_bytes(fd,rng);
-        } else {
-            LOG_F(INFO, "poll timed out - buffer probably full");
         }
     }
     return 0;

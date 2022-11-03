@@ -18,58 +18,48 @@
 #define RNG_BLOCK_CNT 4
 #define RNG_TOTAL (RNG_BLOCK_SZ*RNG_BLOCK_CNT)
 
-static DEFINE_MUTEX(mymutex); // can be heavily optimized
-
-static u8 qrng_buffer[RNG_TOTAL];
-static bool buff_is_renewed[RNG_BLOCK_CNT];
-static int  buff_read_it; // iterates [0;RNG_TOTAL)
-static int  block_write_it; // iterates blocks [0:RNG_BLOCK_CNT)
+static u8   qrng_buffer[RNG_TOTAL];
+static bool block_is_renewed[RNG_BLOCK_CNT];
+static int  buff_read_it = 0; // iterates [0;RNG_TOTAL)
+static int  block_write_it = 0; // iterates blocks [0:RNG_BLOCK_CNT)
 static int  buff_ready_cnt = 0;
+static bool qrng_ready = false;
 
-static bool qrng_ready(void) {
-    int buff_id = buff_read_it/RNG_BLOCK_SZ;
-    bool res = false;
-    int ret = mutex_trylock(&mymutex);
-    if(ret!=0){
-        
-        if(mutex_is_locked(&mymutex)==0) {
-            pr_info("QRNG: failed to lock mutex in qrng_ready\n");
-            return false;
-        }
-
-        if(buff_read_it%RNG_BLOCK_SZ) res = true;
-        else res = buff_is_renewed[buff_id];
-
-        mutex_unlock(&mymutex);
-        return res;
-    }else {
-        pr_info("QRNG: failed to lock mutex in qrng_ready\n");
-        return false;
-    }
-    return 0;
-}
+static DEFINE_MUTEX(buff_mutex);
+DECLARE_WAIT_QUEUE_HEAD (my_queue);
 
 static ssize_t get_random_byte(u8* b) {
-    int buff_id = buff_read_it/RNG_BLOCK_SZ;
-    int ret = mutex_trylock(&mymutex);
+    int ret;
+
+    if(!qrng_ready) return 0;
+
+    ret = mutex_trylock(&buff_mutex);
     if(ret!=0){
-        if(mutex_is_locked(&mymutex)==0) {
+        if(mutex_is_locked(&buff_mutex)==0) {
             pr_info("QRNG: failed to lock mutex in get_random_byte\n");
             return 0;
         }
-        if(buff_read_it%RNG_BLOCK_SZ==0) {
-            if(!buff_is_renewed[buff_id])
-            {
-                mutex_unlock(&mymutex);
-                return 0;
-            }
-            buff_ready_cnt--;
-            buff_is_renewed[buff_id] = false;
+
+        if(!qrng_ready){
+            mutex_unlock(&buff_mutex);
+            return 0;
         }
+
+        if(buff_read_it%RNG_BLOCK_SZ==0)
+            buff_ready_cnt--,
+            block_is_renewed[buff_read_it/RNG_BLOCK_SZ] = false;
+
         *b = qrng_buffer[buff_read_it];
         qrng_buffer[buff_read_it] = 0;
+
         buff_read_it = (buff_read_it+1)%RNG_TOTAL;
-        mutex_unlock(&mymutex); 
+        if(buff_read_it%RNG_BLOCK_SZ==0){
+            qrng_ready = block_is_renewed[buff_read_it/RNG_BLOCK_SZ];
+            if(qrng_ready)
+                wake_up_interruptible(&my_queue);
+        }
+
+        mutex_unlock(&buff_mutex); 
         return 1;
     }else {
         pr_info("QRNG: failed to lock mutex in get_random_byte\n");
@@ -78,22 +68,32 @@ static ssize_t get_random_byte(u8* b) {
     return 0;
 }
 
+
 static ssize_t write_random_bytes_qrng(struct iov_iter* iter) {
     void* block_addr = &qrng_buffer[RNG_BLOCK_SZ*block_write_it];
     size_t copied;
 
-    int ret = mutex_trylock(&mymutex);
+    int ret = mutex_trylock(&buff_mutex);
     if(ret!=0){
-        if(mutex_is_locked(&mymutex)==0) {
+        if(mutex_is_locked(&buff_mutex)==0) {
             pr_info("QRNG: failed to lock mutex in write_random_bytes_qrng\n");
             return 0;
         }
         copied = copy_from_iter(block_addr, RNG_BLOCK_SZ, iter);
-        buff_is_renewed[block_write_it] = 1;
+        pr_info("QRNG: copied %d bytes in write_random_bytes_qrng\n", (int)copied);
+        block_is_renewed[block_write_it] = true;
+
+        // if iterator is at the start of a block that was just written to, mark ready as true
+        if(qrng_ready==false&&(buff_read_it%RNG_BLOCK_SZ==0)&&(buff_read_it/RNG_BLOCK_SZ==block_write_it))
+        {
+            wake_up_interruptible(&my_queue);
+            qrng_ready = true;
+        }
+
         block_write_it = (block_write_it+1)%RNG_BLOCK_CNT;
         buff_ready_cnt++;
 
-        mutex_unlock(&mymutex); 
+        mutex_unlock(&buff_mutex); 
         return copied;
     }else {
         pr_info("QRNG: failed to lock mutex in write_random_bytes_qrng\n");
@@ -111,7 +111,13 @@ static ssize_t get_random_bytes_qrng(struct iov_iter* iter) {
     while(iov_iter_count(iter)) {
         u8 b;
         ssize_t r = get_random_byte(&b);
-        if(r==0) break;
+        if(r==0) {
+            pr_info("QRNG: waiting for qrng_ready to read %d bytes\n", (int)iov_iter_count(iter));
+            if( wait_event_interruptible(my_queue, qrng_ready) != 0 )
+                return -ERESTARTSYS;
+            pr_info("QRNG: received qrng_ready in get_random_bytes_qrng\n");
+            continue; 
+        }
         ret += copy_to_iter(&b,sizeof(b),iter);
     }
     
@@ -170,16 +176,8 @@ static void __exit qrng_exit(void) {
     printk(KERN_INFO "QRNG service module has been unloaded\n");
 }
 
-
 static ssize_t qrng_read_iter(struct kiocb* kiocb, struct iov_iter* iter) {
-    #ifdef QRNG_DEBUG
-        pr_info("QRNG: read_iter function called\n");
-    #endif
-    if(!qrng_ready())
-        return -EAGAIN;
-
     printk(KERN_INFO "QRNG read iter size: %d\n", (int)iov_iter_count(iter));
-
     return get_random_bytes_qrng(iter);
 }
 
@@ -191,31 +189,18 @@ static ssize_t qrng_write_iter(struct kiocb*, struct iov_iter* iter) {
     if(unlikely(!iov_iter_count(iter)))
         return 0;
 
-    #ifdef QRNG_DEBUG
-        pr_info("QRNG: write_iter function called\n");
-        pr_info("QRNG: write_iter iov_iter_count %d\n",iov_iter_count(iter));
-        pr_info("QRNG: write_iter ready %d\n",buff_ready_cnt);
-    #endif
-
     while(iov_iter_count(iter)>=RNG_BLOCK_SZ&&buff_ready_cnt<RNG_BLOCK_CNT) {
         copied = write_random_bytes_qrng(iter);
         ret += copied;
-        #ifdef QRNG_DEBUG
-            pr_info("QRNG: write_iter copied %d\n",copied);
-        #endif
     }
 
-    #ifdef QRNG_DEBUG
-        pr_info("QRNG: write_iter ret %d\n",ret);
-    #endif
-    
     return ret ? ret : -EFAULT;
 }
 
 static __poll_t qrng_poll(struct file* file, poll_table* wait) {
     __poll_t res = 0;
     if(buff_ready_cnt<RNG_BLOCK_CNT) res |= EPOLLOUT;  // writing is now possible
-    if(qrng_ready()) res |= POLLIN|EPOLLRDNORM;     // there is data to read.
+    if(qrng_ready) res |= POLLIN|EPOLLRDNORM;     // there is data to read.
     return res;
 }
 
