@@ -30,3 +30,6 @@ $(BDIR)/loguru.o: external/loguru/loguru.cpp external/loguru/loguru.hpp
 
 run: $(EXECUTABLE)
 	$(EXECUTABLE)
+
+clean:
+	rm -rf ./build
