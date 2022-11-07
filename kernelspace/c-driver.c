@@ -14,101 +14,79 @@
 //#define QRNG_DEBUG
 
 #define DEVICE_NAME "qrandom0"
-#define RNG_BLOCK_SZ  (size_t)256 // requested byte count from qrng.lumii.lv
-#define RNG_BLOCK_CNT 4
-#define RNG_TOTAL (RNG_BLOCK_SZ*RNG_BLOCK_CNT)
+#define BUFF_SIZE 1024
 
-static u8   qrng_buffer[RNG_TOTAL];
-static bool block_is_renewed[RNG_BLOCK_CNT];
-static int  buff_read_it = 0; // iterates [0;RNG_TOTAL)
-static int  block_write_it = 0; // iterates blocks [0:RNG_BLOCK_CNT)
-static int  buff_ready_cnt = 0;
-static bool qrng_ready = false;
+static u8   qrng_buffer[BUFF_SIZE];
+static u8   qrng_buff_ready[BUFF_SIZE]; // true or false
+static int  qrng_buff_read_it = 0;  // iterates 
+static int  qrng_buff_write_it = 0;
+
+#define read_ready  (   qrng_buff_ready[qrng_buff_read_it]   )
+#define write_ready (   !qrng_buff_ready[qrng_buff_write_it] )
 
 static DEFINE_MUTEX(buff_mutex);
-DECLARE_WAIT_QUEUE_HEAD (read_queue); // for processes that want to read
-DECLARE_WAIT_QUEUE_HEAD (poll_queue); // for processes that might want to read or write
+static DECLARE_WAIT_QUEUE_HEAD (read_queue); // for processes that want to read
+static DECLARE_WAIT_QUEUE_HEAD (poll_queue); // for processes that might want to read or write
 
 static ssize_t get_random_byte(u8* b) {
-    int ret;
-
-    if(!qrng_ready) return 0;
-
-    ret = mutex_trylock(&buff_mutex);
-    if(ret!=0){
-        if(mutex_is_locked(&buff_mutex)==0) {
-            pr_info("QRNG: failed to lock mutex in get_random_byte\n");
-            return 0;
-        }
-
-        if(!qrng_ready){
-            mutex_unlock(&buff_mutex);
-            return 0;
-        }
-
-        if(buff_read_it%RNG_BLOCK_SZ==0) {
-            buff_ready_cnt--;
-            wake_up_interruptible(&poll_queue);
-            block_is_renewed[buff_read_it/RNG_BLOCK_SZ] = false;
-        }
-
-        *b = qrng_buffer[buff_read_it];
-        qrng_buffer[buff_read_it] = 0;
-
-        buff_read_it = (buff_read_it+1)%RNG_TOTAL;
-        if(buff_read_it%RNG_BLOCK_SZ==0){
-            qrng_ready = block_is_renewed[buff_read_it/RNG_BLOCK_SZ];
-            if(qrng_ready) {
-                wake_up_interruptible(&read_queue);
-            }
-            wake_up_interruptible(&poll_queue);
-        }
-
-        mutex_unlock(&buff_mutex); 
-        return 1;
-    }else {
+    mutex_lock(&buff_mutex);
+    if(mutex_is_locked(&buff_mutex)==0) {
         pr_info("QRNG: failed to lock mutex in get_random_byte\n");
         return 0;
     }
-    return 0;
+
+    if(!read_ready){
+        mutex_unlock(&buff_mutex);
+        return 0;
+    }
+
+    qrng_buff_ready[qrng_buff_read_it] = false; // mark byte as unavailable
+    *b = qrng_buffer[qrng_buff_read_it];             // read byte at iterator
+    qrng_buffer[qrng_buff_read_it] = 0;              // clear its value
+    qrng_buff_read_it = (qrng_buff_read_it+1)%BUFF_SIZE;  // increment read iterator
+
+    mutex_unlock(&buff_mutex);
+
+    wake_up_interruptible(&poll_queue); // a byte can be renewed
+    if(read_ready) wake_up_interruptible(&read_queue); // a byte can be read
+
+    return 1; // the function always reads just one byte
 }
 
 
 static ssize_t write_random_bytes_qrng(struct iov_iter* iter) {
-    void* block_addr;
-    size_t copied;
-    
-    int ret = mutex_trylock(&buff_mutex);
-    if(ret!=0){
-        if(mutex_is_locked(&buff_mutex)==0) {
-            pr_info("QRNG: failed to lock mutex in write_random_bytes_qrng\n");
-            return 0;
-        }
-        
-        block_addr = &qrng_buffer[RNG_BLOCK_SZ*block_write_it];
-        copied = copy_from_iter(block_addr, RNG_BLOCK_SZ, iter);
-        
-        pr_info("QRNG: copied %d bytes in write_random_bytes_qrng\n", (int)copied);
-        block_is_renewed[block_write_it] = true;
+    ssize_t ret = 0;
 
-        // if iterator is at the start of a block that was just written to, mark ready as true
-        if(qrng_ready==false&&(buff_read_it%RNG_BLOCK_SZ==0)&&(buff_read_it/RNG_BLOCK_SZ==block_write_it))
-        {
-            wake_up_interruptible(&read_queue);
-            wake_up_interruptible(&poll_queue);
-            qrng_ready = true;
-        }
-
-        block_write_it = (block_write_it+1)%RNG_BLOCK_CNT;
-        buff_ready_cnt++;
-
-        mutex_unlock(&buff_mutex); 
-        return copied;
-    }else {
+    mutex_lock(&buff_mutex);
+    if(mutex_is_locked(&buff_mutex)==0) {
         pr_info("QRNG: failed to lock mutex in write_random_bytes_qrng\n");
         return 0;
     }
-    return 0;
+    
+    if(!write_ready) {
+        mutex_unlock(&buff_mutex);
+        return 0;
+    }
+
+    while(write_ready&&iov_iter_count(iter)) {
+        u8 byte;
+		ssize_t copied = copy_from_iter(&byte, sizeof(byte), iter);
+		if (copied != sizeof(byte))
+			break;
+        ret += copied;
+        qrng_buffer[qrng_buff_write_it] = byte;
+        qrng_buff_ready[qrng_buff_write_it] = 1;
+        qrng_buff_write_it = ( qrng_buff_write_it + 1) % BUFF_SIZE;
+    }
+    
+    mutex_unlock(&buff_mutex);
+
+    if(ret) {
+        wake_up_interruptible(&read_queue);
+        wake_up_interruptible(&poll_queue);
+    }
+    
+    return ret;
 }
 
 static ssize_t get_random_bytes_qrng(struct iov_iter* iter, bool get_all) {
@@ -122,10 +100,10 @@ static ssize_t get_random_bytes_qrng(struct iov_iter* iter, bool get_all) {
         ssize_t r = get_random_byte(&b);
         if(r==0) {
             if(get_all) {
-                pr_info("QRNG: waiting for qrng_ready to read %d bytes\n", (int)iov_iter_count(iter));
-                if( wait_event_interruptible(read_queue, qrng_ready) != 0 )
+                pr_info("QRNG: waiting for read_ready to read %d bytes\n", (int)iov_iter_count(iter));
+                if( wait_event_interruptible(read_queue, read_ready) != 0 )
                     return -ERESTARTSYS;
-                pr_info("QRNG: received qrng_ready in get_random_bytes_qrng\n");
+                pr_info("QRNG: received read_ready in get_random_bytes_qrng\n");
                 continue; 
             } else {
                 return ret;
@@ -195,7 +173,7 @@ static ssize_t qrng_read_iter(struct kiocb* kiocb, struct iov_iter* iter) {
     nonblocking |= (kiocb->ki_flags & (IOCB_NOWAIT | IOCB_NOIO));
     nonblocking |= (kiocb->ki_filp->f_flags & O_NONBLOCK);
 
-    if (!qrng_ready&&nonblocking)
+    if (!read_ready&&nonblocking)
         return -EAGAIN;
 
     // printk(KERN_INFO "QRNG read iter size: %d\n", (int)iov_iter_count(iter));
@@ -210,8 +188,10 @@ static ssize_t qrng_write_iter(struct kiocb*, struct iov_iter* iter) {
     if(unlikely(!iov_iter_count(iter)))
         return 0;
 
-    while(iov_iter_count(iter)>=RNG_BLOCK_SZ&&buff_ready_cnt<RNG_BLOCK_CNT) {
+    while(iov_iter_count(iter)&&write_ready) {
         copied = write_random_bytes_qrng(iter);
+        if(copied==0)
+            break;
         ret += copied;
     }
 
@@ -223,8 +203,8 @@ static __poll_t qrng_poll(struct file* file, poll_table* wait) {
 
 	poll_wait(file, &poll_queue, wait);
     
-    if(buff_ready_cnt<RNG_BLOCK_CNT) res |= EPOLLOUT;  // writing is now possible
-    if(qrng_ready) res |= POLLIN|EPOLLRDNORM;     // there is data to read.
+    if(write_ready) res |= EPOLLOUT;  // writing is now possible
+    if(read_ready) res |= POLLIN|EPOLLRDNORM;     // there is data to read.
 
     printk(KERN_INFO "QRNG service polled, returned %d\n", res);
 
