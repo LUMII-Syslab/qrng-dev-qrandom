@@ -177,10 +177,10 @@ namespace loguru
 	// Preamble details
 	bool      g_preamble_date     = true;
 	bool      g_preamble_time     = true;
-	bool      g_preamble_uptime   = true;
-	bool      g_preamble_thread   = true;
+	bool      g_preamble_uptime   = false;
+	bool      g_preamble_thread   = false;
 	bool      g_preamble_file     = true;
-	bool      g_preamble_verbose  = true;
+	bool      g_preamble_verbose  = false;
 	bool      g_preamble_pipe     = true;
 
 	static std::recursive_mutex  s_mutex;
