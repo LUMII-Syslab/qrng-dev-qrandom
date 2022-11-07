@@ -1,6 +1,7 @@
 import subprocess
 
-CMD = "od -vAn -N2560 -tu1 < /dev/qrandom0"
+BYTES = 10000
+CMD = f"od -vAn -N{BYTES} -tu1 < /dev/qrandom0"
 # CMD = 'echo "1 2 1 3 4 5 1 6\n 7 0 0 0 0 0 0 \n0 0 0\n 0 0 0 2 1 6 "' for testing purposes
 
 result = subprocess.run(['sudo', 'bash', '-c', CMD], stdout=subprocess.PIPE).stdout.decode('utf-8')
