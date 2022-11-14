@@ -12,6 +12,10 @@ Building the project requires kernel header files. Acquiring them is described i
 
 To build and install the service, `cd` into the root of the repo and run `make install`.
 
+The file can then be read from. Reading operation will be blocked untill data is available unless `O_NONBLOCK` flag is specified when opening the file with [open](https://man7.org/linux/man-pages/man2/open.2.html).
+
+The random bytes generated can be seen by running the `od -vAn -N256 -tu1 < /dev/qrandom0` command.
+
 ## kernel module
 
 The kernel module is installed into `/usr/lib/modules/$(shell uname -r)/extra` and listed in `/etc/modules-load.d/qrng-driver.conf` for automatic load during boot.
