@@ -1,8 +1,12 @@
 # QRNG service - replacement for `/dev/random`
 
-The repository contains a makefile which will build and install a kernel module and a systemd service. The userspace service feeds random bytes into the kernelspace character device driver through `/dev/qrandom0`. The bytes can then be read through the file by other processes instead of those provided by `/dev/random`.
+The repository contains a makefile which will build and install a character device and a userspace service. The userspace service feeds random bytes into the kernelspace character device driver through `/dev/qrandom0`. The bytes can then be read through `/dev/qrandom0` instead of those provided by `/dev/random`.
 
 The project is meant to fetch random bytes from [Remote Quantum Random Number Generator](https://qrng.lumii.lv/) but can adapted to suit other requirements.
+
+## requirements
+
+Building the project requires kernel header files. Acquiring them is described in [LKMPG#headers](https://sysprog21.github.io/lkmpg/#headers).
 
 ## usage
 
@@ -14,9 +18,9 @@ The kernel module is installed into `/usr/lib/modules/$(shell uname -r)/extra` a
 
 The module registers and creates a character device file `/dev/qrandom0`. The file can be read from, written to, polled with sudo privileges.
 
-## systemd service
+## userspace service
 
-The systemd service is installed into `/etc/systemd/system/qrng.service` for access by [Systemd](https://en.wikipedia.org/wiki/Systemd). 
+The userspace service executable is installed into `/opt/qrng-service` and a .service file placed in `/etc/systemd/system/qrng.service` for access by [Systemd](https://en.wikipedia.org/wiki/Systemd). 
 
 The userspace qrng service polls `/dev/qrandom0` and is blocked in an interruptible manner until data can be written to the file. 
 
