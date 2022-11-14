@@ -4,6 +4,9 @@ The repository contains a makefile which will build and install a kernel module 
 
 The project is meant to fetch random bytes from [Remote Quantum Random Number Generator](https://qrng.lumii.lv/) but can adapted to suit other requirements.
 
+## usage
+
+To build and install the service, `cd` into the root of the repo and run `make install`.
 
 ## kernel module
 
@@ -13,14 +16,19 @@ The module registers and creates a character device file `/dev/qrandom0`. The fi
 
 ## systemd service
 
-Systemd provides a system and service manager that runs as PID 1 and starts the rest of the system.
+The systemd service is installed into `/etc/systemd/system/qrng.service` for access by [Systemd](https://en.wikipedia.org/wiki/Systemd). 
 
+The userspace qrng service polls `/dev/qrandom0` and is blocked in an interruptible manner until data can be written to the file. 
+
+Its logs can be viewed through the `systemctl status qrng` command.
+
+The service keeps a buffer of random bytes fetched through `qrng.lumii.lv` for use in the future.
+
+## qrng.lumii.lv
 
 `qrng-client` is already compiled into a shared object and placed in the `./lib` directory. It can be manually compiled and replaced by following the instructions in its [repo](https://github.com/LUMII-Syslab/qrng-client). Provided are also header files for `qrng-client` placed into `./include` directory.
 
 For more information visit [qrng.lumii.lv](https://qrng.lumii.lv/).
-
-## Prerequisites
 
 To use QRNG web service 3 files are required to be placed into `./config` directory:
 * ca.truststore (the root CA certificate used to sign the QRNG server HTTPS certificate and client sertificates)
@@ -28,7 +36,3 @@ To use QRNG web service 3 files are required to be placed into `./config` direct
 * qrng.properties (key passwords and other settings)
 
 The files are currently provided upon request by mailing to syslab_services at lumii.lv
-
-## Usage
-
-To build and install the service, `cd` into the root of the repo and run `make install`.
