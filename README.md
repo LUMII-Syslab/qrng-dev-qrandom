@@ -44,3 +44,13 @@ To use QRNG web service 3 files are required to be placed into `/etc/qrng-servic
 * qrng.properties (key passwords and other settings)
 
 The files are currently provided upon request by mailing to syslab_services at lumii.lv
+
+## benchmarks
+
+Reading byte by byte leads to the following results:
+
+DEVICE_PATH     32 bit ints     time (seconds)
+/dev/random     1000000         0.244270 sec
+/dev/qrandom0   1000000         0.592094 sec
+
+There is also `distribution.py` which plots the distribution of bytes among fetched.
