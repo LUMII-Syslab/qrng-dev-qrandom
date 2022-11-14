@@ -31,7 +31,7 @@ static DECLARE_WAIT_QUEUE_HEAD (poll_queue); // for processes that might want to
 static ssize_t get_random_byte(u8* b) {
     mutex_lock(&buff_mutex);
     if(mutex_is_locked(&buff_mutex)==0) {
-        pr_info("QRNG: failed to lock mutex in get_random_byte\n");
+        //pr_info("QRNG: failed to lock mutex in get_random_byte\n");
         return 0;
     }
 
@@ -59,7 +59,7 @@ static ssize_t write_random_bytes_qrng(struct iov_iter* iter) {
 
     mutex_lock(&buff_mutex);
     if(mutex_is_locked(&buff_mutex)==0) {
-        pr_info("QRNG: failed to lock mutex in write_random_bytes_qrng\n");
+        //pr_info("QRNG: failed to lock mutex in write_random_bytes_qrng\n");
         return 0;
     }
     
@@ -100,10 +100,10 @@ static ssize_t get_random_bytes_qrng(struct iov_iter* iter, bool get_all) {
         ssize_t r = get_random_byte(&b);
         if(r==0) {
             if(get_all) {
-                pr_info("QRNG: waiting for read_ready to read %d bytes\n", (int)iov_iter_count(iter));
+                //pr_info("QRNG: waiting for read_ready to read %d bytes\n", (int)iov_iter_count(iter));
                 if( wait_event_interruptible(read_queue, read_ready) != 0 )
                     return -ERESTARTSYS;
-                pr_info("QRNG: received read_ready in get_random_bytes_qrng\n");
+                //pr_info("QRNG: received read_ready in get_random_bytes_qrng\n");
                 continue; 
             } else {
                 return ret;
@@ -206,7 +206,7 @@ static __poll_t qrng_poll(struct file* file, poll_table* wait) {
     if(write_ready) res |= EPOLLOUT;  // writing is now possible
     if(read_ready) res |= POLLIN|EPOLLRDNORM;     // there is data to read.
 
-    printk(KERN_INFO "QRNG service polled, returned %d\n", res);
+    //printk(KERN_INFO "QRNG service polled, returned %d\n", res);
 
     return res;
 }

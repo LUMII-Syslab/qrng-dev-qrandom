@@ -1,4 +1,4 @@
 *
 !.gitignore
 !Makefile
-!c-driver.c
+!qrng-driver.c

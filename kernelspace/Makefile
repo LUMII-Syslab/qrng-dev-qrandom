@@ -1,9 +1,13 @@
-obj-m += c-driver.o 
+obj-m += qrng-driver.o 
  
-PWD := $(CURDIR) 
- 
-all:
-	$(MAKE) -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
+PWD:=$(CURDIR) 
+KDIR:=/lib/modules/$(shell uname -r)/build
 
+all:
+	$(MAKE) -C $(KDIR) M=$(PWD) modules
+
+install: all
+	$(MAKE) -C $(KDIR) M=$(PWD) INSTALL_MOD_DIR=extra modules_install
+ 
 clean:
-	$(MAKE) -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+	$(MAKE) -C $(KDIR) M=$(PWD) clean
