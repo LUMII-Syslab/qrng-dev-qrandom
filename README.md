@@ -2,11 +2,13 @@
 
 The repository contains a makefile which will build and install a character device and a userspace service. The userspace service feeds random bytes into the kernelspace character device driver through `/dev/qrandom0`. The bytes can then be read through `/dev/qrandom0` instead of those provided by `/dev/random`.
 
-The project is meant to fetch random bytes from [Remote Quantum Random Number Generator](https://qrng.lumii.lv/) but can adapted to suit other requirements.
+The project is meant to fetch random bytes from [Remote Quantum Random Number Generator](https://qrng.lumii.lv/) but can adapted to suit other requirements. However it is by default configured to use PRNG that sits behind an RNG interface.
 
 ## requirements
 
 Building the project requires kernel header files. Acquiring them is described in [LKMPG#headers](https://sysprog21.github.io/lkmpg/#headers).
+
+The project also requires [qrng-client](https://github.com/LUMII-Syslab/qrng-client) - library used to fetch bytes from [qrng.lumii.lv](https://qrng.lumii.lv/). `qrng-client` is provided in the repo with both install and uninstall scripts for ease of deployment.
 
 ## usage
 
@@ -24,21 +26,19 @@ The module registers and creates a character device file `/dev/qrandom0`. The fi
 
 ## userspace service
 
-The userspace service executable is installed into `/opt/qrng-service` and a .service file placed in `/etc/systemd/system/qrng.service` for access by [Systemd](https://en.wikipedia.org/wiki/Systemd). 
+The userspace service executable is installed into `/opt/qrng-service` and a .service file placed in `/etc/systemd/system/qrng.service` for access by [Systemd](https://en.wikipedia.org/wiki/Systemd) and automatic load during boot. 
 
 The userspace qrng service polls `/dev/qrandom0` and is blocked in an interruptible manner until data can be written to the file. 
 
 Its logs can be viewed through the `systemctl status qrng` command.
 
-The service keeps a buffer of random bytes fetched through `qrng.lumii.lv` for use in the future.
+The service keeps a buffer of random bytes fetched through RNG interface for use in the future.
 
 ## qrng.lumii.lv
 
-`qrng-client` is already compiled into a shared object and placed in the `./lib` directory. It can be manually compiled and replaced by following the instructions in its [repo](https://github.com/LUMII-Syslab/qrng-client). Provided are also header files for `qrng-client` placed into `./include` directory.
+As mentioned above the service is by default configured to use PRNG that sits behind an RNG interface. To swap it out for QRNG provided by [qrng.lumii.lv](https://qrng.lumii.lv/) additional requirements have to be satisfied.
 
-For more information visit [qrng.lumii.lv](https://qrng.lumii.lv/).
-
-To use QRNG web service 3 files are required to be placed into `./config` directory:
+To use QRNG web service 3 files are required to be placed into `/etc/qrng-service` directory:
 * ca.truststore (the root CA certificate used to sign the QRNG server HTTPS certificate and client sertificates)
 * token.keystore (your client certificate, signed by the CA that serves the QRNG server)
 * qrng.properties (key passwords and other settings)
