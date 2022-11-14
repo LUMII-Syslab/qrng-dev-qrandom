@@ -1,1 +1,3 @@
-/dev/random 1000000 0.244270
+DEVICE_PATH     32 bit ints     time (seconds)
+/dev/random     1000000         0.244270 sec
+/dev/qrandom0   1000000         0.592094 sec
