@@ -1,11 +1,11 @@
-all: qrng-client qrng-driver
-
-qrng-client:
+all: 
+	$(MAKE) -C ./kernelspace
 	$(MAKE) -C ./userspace
 
-qrng-driver:
-	$(MAKE) -C ./kernelspace
+install:
+	$(MAKE) -C ./kernelspace install
+	$(MAKE) -C ./userspace install
 
 clean:
-	$(MAKE) -C ./userspace clean
 	$(MAKE) -C ./kernelspace clean
+	$(MAKE) -C ./userspace clean
