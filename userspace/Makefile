@@ -5,7 +5,7 @@ CXXFLAGS += -I src
 BDIR = build
 $(shell mkdir -p $(BDIR)) # create the directory if it doesn't exist
 
-EXE_NAME = qrng.out
+EXE_NAME = qrng-service.out
 EXECUTABLE = $(BDIR)/$(EXE_NAME)
 
 OBJS += $(BDIR)/main.o
@@ -30,6 +30,19 @@ $(BDIR)/loguru.o: external/loguru/loguru.cpp external/loguru/loguru.hpp
 
 run: $(EXECUTABLE)
 	$(EXECUTABLE)
+
+INSTALL_DIR:=/opt/qrng-service
+SERVICE_DIR:=/etc/systemd/system
+
+SERVICE:=./systemd/qrng.service
+
+install: $(EXECUTABLE)
+	mkdir -p $(INSTALL_DIR)
+	cp $(EXECUTABLE) $(INSTALL_DIR)
+	cp $(SERVICE) $(SERVICE_DIR)
+	systemctl start qrng
+	systemctl enable qrng
+	systemctl status qrng
 
 clean:
 	rm -rf ./build

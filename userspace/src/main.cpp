@@ -36,13 +36,17 @@ void log_bytes(byte bytes[], int byte_cnt) {
 
 void write_random_bytes(int fd, RNG *rng)
 { 
+    #ifdef DEBUG
     LOG_F(INFO, "preparing %d random bytes", WRITE_SIZE);
+    #endif
 
     int qrng_write_arr_it = 0;
     while(qrng_write_arr_it<qrng_write_arr_renew) {
 
         if(qrng_buff_read_it==REQUEST_SIZE) {
+            #ifdef DEBUG
             LOG_F(INFO, "requesting %d random bytes", REQUEST_SIZE);
+            #endif
             rng->fetch_bytes(qrng_buff, REQUEST_SIZE);
             qrng_buff_read_it = 0;
         }
@@ -50,14 +54,18 @@ void write_random_bytes(int fd, RNG *rng)
         qrng_write_arr[qrng_write_arr_it++] = qrng_buff[qrng_buff_read_it++];
     }
 
+    #ifdef DEBUG
     LOG_F(INFO, "writing %d bytes to %s", WRITE_SIZE, DEVICE_PATH);
+    #endif
     int wres = write(fd, qrng_write_arr, sizeof(qrng_write_arr));
 
     if (wres < 0)
         ABORT_F("write failed with errno %d", errno);
     
     qrng_write_arr_renew = wres;
+    #ifdef DEBUG
     LOG_F(INFO, "%d bytes written to %s\n", wres, DEVICE_PATH);
+    #endif
 }
 
 int main(int argc, char **argv)
@@ -84,13 +92,17 @@ int main(int argc, char **argv)
 
     while (1)
     {
+        #ifdef DEBUG
         LOG_F(INFO, "polling for POLLOUT event");
+        #endif
         int r = poll(&qrngpoll, 1, -1); // poll single file descriptor wihtout timeout
         if (qrngpoll.revents & POLLOUT)
         {
             qrngpoll.revents = 0;
 
+            #ifdef DEBUG
             LOG_F(INFO, "random bytes should be written");
+            #endif
 
             write_random_bytes(fd, rng);
         }
