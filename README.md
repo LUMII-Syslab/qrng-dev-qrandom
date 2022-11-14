@@ -2,6 +2,9 @@
 
 The repository contains a makefile which will build and install a kernel module and a systemd service. The userspace service feeds random bytes into the kernelspace character device driver through `/dev/qrandom0`. The bytes can then be read through the file by other processes instead of those provided by `/dev/random`.
 
+The project is meant to fetch random bytes from [Remote Quantum Random Number Generator](https://qrng.lumii.lv/) but can adapted to suit other requirements.
+
+
 ## kernel module
 
 The kernel module is installed into `/usr/lib/modules/$(shell uname -r)/extra` and listed in `/etc/modules-load.d/qrng-driver.conf` for automatic load during boot.
