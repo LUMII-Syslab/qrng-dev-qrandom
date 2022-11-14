@@ -8,6 +8,7 @@ all:
 
 install: all
 	$(MAKE) -C $(KDIR) M=$(PWD) INSTALL_MOD_DIR=extra modules_install
+	echo "qrng-driver" > /etc/modules-load.d/qrng-driver.conf
  
 clean:
 	$(MAKE) -C $(KDIR) M=$(PWD) clean
