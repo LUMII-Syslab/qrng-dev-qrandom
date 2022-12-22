@@ -8,7 +8,7 @@ The project is meant to fetch random bytes from [Remote Quantum Random Number Ge
 
 Building the project requires kernel header files. Acquiring them is described in [LKMPG#headers](https://sysprog21.github.io/lkmpg/#headers).
 
-To acquire required dependencies on fedora `yum install kernel-devel-$(basename $(uname -r) .x86_64)` and `dnf in gcc-c++` can be run.
+To acquire required dependencies on fedora `yum install kernel-devel-$(basename $(uname -r) .x86_64)` and `dnf in gcc-c++` can be run. The userspace process can crash either because it can't find shared object file or because it lacks permissions to write /dev/qrandom0. To fix the former issue one can create .conf file in `/etc/ld.so.conf.d` that includes `/usr/lib`.
 
 The project also requires [qrng-client](https://github.com/LUMII-Syslab/qrng-client) - library used to fetch bytes from [qrng.lumii.lv](https://qrng.lumii.lv/). `qrng-client` is provided in the repo with both install and uninstall scripts for ease of deployment.
 
