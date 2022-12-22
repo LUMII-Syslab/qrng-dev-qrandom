@@ -8,6 +8,8 @@ The project is meant to fetch random bytes from [Remote Quantum Random Number Ge
 
 Building the project requires kernel header files. Acquiring them is described in [LKMPG#headers](https://sysprog21.github.io/lkmpg/#headers).
 
+To acquire required dependencies on fedora `sudo yum install kernel-devel-$(basename $(uname -r) .x86_64)` can be run.
+
 The project also requires [qrng-client](https://github.com/LUMII-Syslab/qrng-client) - library used to fetch bytes from [qrng.lumii.lv](https://qrng.lumii.lv/). `qrng-client` is provided in the repo with both install and uninstall scripts for ease of deployment.
 
 ## usage
