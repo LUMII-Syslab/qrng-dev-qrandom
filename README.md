@@ -1,18 +1,32 @@
 # QRNG service - replacement for `/dev/random`
 
-The repository contains a makefile which will build and install a character device and a userspace service. The userspace service feeds random bytes into the kernelspace character device driver through `/dev/qrandom0`. The bytes can then be read through `/dev/qrandom0` instead of those provided by `/dev/random`.
+The repo contains a `Makefile` which will build and install both a character device
+and a [userspace](https://en.wikipedia.org/wiki/User_space_and_kernel_space) service.
 
-The project is meant to fetch random bytes from [Remote Quantum Random Number Generator](https://qrng.lumii.lv/) but can adapted to suit other requirements. However it is by default configured to use PRNG that sits behind an RNG interface.
 
-## requirements
+The userspace service feeds random bytes into the kernelspace character device driver.
+The bytes can then be read from `/dev/qrandom0` which serves as a replacement for `/dev/random`.
 
-Building the project requires kernel header files. Acquiring them is described in [LKMPG#headers](https://sysprog21.github.io/lkmpg/#headers).
+The userspace service is intended to fetch random bytes from [Remote Quantum Random Number Generator](https://qrng.lumii.lv/)
+but can be adapted to suit other requirements. However, it is by default configured to use [PRNG](https://en.wikipedia.org/wiki/Pseudorandom_number_generator).
 
-To acquire required dependencies on fedora `yum install kernel-devel-$(basename $(uname -r) .x86_64)` and `dnf in gcc-c++` can be run. The userspace process can crash either because it can't find shared object file or because it lacks permissions to write /dev/qrandom0. To fix the former issue one can create .conf file in `/etc/ld.so.conf.d` that includes `/usr/lib`.
+## Requirements
 
-The project also requires [qrng-client](https://github.com/LUMII-Syslab/qrng-client) - library used to fetch bytes from [qrng.lumii.lv](https://qrng.lumii.lv/). `qrng-client` is provided in the repo with both install and uninstall scripts for ease of deployment.
+Building the project requires kernel header files.
+Acquiring them is described in [LKMPG#headers](https://sysprog21.github.io/lkmpg/#headers).
 
-## usage
+To acquire required dependencies on fedora `yum install kernel-devel-$(basename $(uname -r) .x86_64)`
+and `dnf in gcc-c++` can be run.
+
+The userspace process can crash either because it can't find shared object file
+or because it lacks permissions to write to `/dev/qrandom0`.
+
+To fix the former issue one can create `.conf` file in `/etc/ld.so.conf.d` that includes `/usr/lib`.
+
+The project also requires [qrng-client](https://github.com/LUMII-Syslab/qrng-client) - library used to fetch bytes from [qrng.lumii.lv](https://qrng.lumii.lv/).
+`qrng-client` is provided in the repo with both install and uninstall scripts for ease of deployment.
+
+## Usage
 
 To build and install the service, `cd` into the root of the repo and run `make install`.
 
@@ -51,7 +65,7 @@ The files are currently provided upon request by mailing to syslab_services at l
 
 Reading byte by byte leads to the following results:
 
-| DEVICE_PATH   | 32 bit ints | time (seconds) |
+| `DEVICE_PATH`   | 32 bit integers | time (seconds) |
 |---------------|-------------|----------------|
 | /dev/random   | 1000000     | 0.244270 sec   |
 | /dev/qrandom0 | 1000000     | 0.592094 sec   |
