@@ -6,6 +6,9 @@ and a [userspace](https://en.wikipedia.org/wiki/User_space_and_kernel_space) ser
 The userspace service feeds random bytes into the kernelspace [character device driver](https://linux-kernel-labs.github.io/refs/heads/master/labs/device_drivers.html).
 These bytes can then be read from `/dev/qrandom0` which serves as a replacement for `/dev/random`.
 
+The solution is intended to fetch random bytes from [Remote Quantum Random Number Generator](https://qrng.lumii.lv/)
+but can be adapted to suit other requirements. By default, it uses a [PRNG](https://en.wikipedia.org/wiki/Pseudorandom_number_generator).
+
 ## Requirements
 
 Building the project requires kernel header files.
@@ -50,8 +53,6 @@ To fix the former issue one can create `.conf` file in `/etc/ld.so.conf.d` that 
 
 The service keeps a buffer of random bytes fetched through RNG interface for use in the future.
 
-The userspace service is intended to fetch random bytes from [Remote Quantum Random Number Generator](https://qrng.lumii.lv/)
-but can be adapted to suit other requirements. By default, it is configured to use [PRNG](https://en.wikipedia.org/wiki/Pseudorandom_number_generator).
 
 ## qrng.lumii.lv
 
