@@ -138,7 +138,7 @@ const struct file_operations qrng_fops = {
 static int major;
 static struct class *cls;
 
-static char *qrng_devnode(struct device *dev, umode_t *mode)
+static char *qrng_devnode(const struct device *dev, umode_t *mode)
 {
     if (mode) *mode = 0644;
     return NULL;
@@ -156,7 +156,7 @@ static int __init qrng_init(void)
 
     printk(KERN_INFO "QRNG service module has been loaded: %d\n", major);
 
-    cls = class_create(THIS_MODULE, DEVICE_NAME);
+    cls = class_create(DEVICE_NAME);
     cls->devnode = qrng_devnode;
     device_create(cls, NULL, MKDEV(major, 0), NULL, DEVICE_NAME);
 
