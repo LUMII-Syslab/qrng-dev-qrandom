@@ -43,6 +43,10 @@ and listed in `/etc/modules-load.d/qrng-driver.conf` for automatic load during b
 The module registers and creates a character device file `/dev/qrandom0`.
 The file can be read from, written to, polled with sudo privileges.
 
+As of now on linux kernel version 6.4.3 the module compiles successfully.
+This might not be the case in the near future as there were breaking changes recently.
+To check the kernel version one can run `uname -r`.
+
 ## Userspace service
 
 The userspace service executable is installed into `/opt/qrng-service` and a `.service` file placed in `/etc/systemd/system/qrng.service` for access by [Systemd](https://en.wikipedia.org/wiki/Systemd) and automatic load during boot. 
