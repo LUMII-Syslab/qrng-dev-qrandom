@@ -19,7 +19,8 @@ Acquiring them is described in [LKMPG#headers](https://sysprog21.github.io/lkmpg
 
 To fetch random bytes from the remote [QRNG](https://en.wikipedia.org/wiki/Hardware_random_number_generator)
 provided by [qrng.lumii.lv](https://qrng.lumii.lv/),
-the project also requires [qrng-client](https://github.com/LUMII-Syslab/qrng-client) library.
+the project also requires [qrng-client](https://github.com/LUMII-Syslab/qrng-client) library
+as well as swapping out `/userspace/src/main.cpp` `PRNG` in line `RNG *rng = new PRNG();` with `QRNG`.
 
 `qrng-client` is provided in the repo with both install and uninstall scripts for ease of use.
 However, it is not included in the `Makefile` and has to be installed manually.
