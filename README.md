@@ -79,4 +79,4 @@ Reading byte by byte leads to the following results:
 | /dev/random   | 1000000     | 0.244270 sec   |
 | /dev/qrandom0 | 1000000     | 0.592094 sec   |
 
-There is also `distribution.py` which plots the distribution of bytes among fetched.
+There is also `/testing/distribution.py` which plots the distribution of bytes among fetched.
