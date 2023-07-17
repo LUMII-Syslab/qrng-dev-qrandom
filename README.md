@@ -3,10 +3,12 @@
 The repository contains a `Makefile` which will build and install both a character device
 and a [userspace](https://en.wikipedia.org/wiki/User_space_and_kernel_space) service.
 
-The userspace service feeds random bytes into the kernelspace [character device driver](https://linux-kernel-labs.github.io/refs/heads/master/labs/device_drivers.html).
+The userspace service feeds random bytes into the
+kernelspace [character device driver](https://linux-kernel-labs.github.io/refs/heads/master/labs/device_drivers.html).
 These bytes can then be read from `/dev/qrandom0` which serves as a replacement for `/dev/random`.
 
-The solution is intended to fetch random bytes from a remote [QRNG](https://en.wikipedia.org/wiki/Hardware_random_number_generator)
+The solution is intended to fetch random bytes from a
+remote [QRNG](https://en.wikipedia.org/wiki/Hardware_random_number_generator)
 provided by [qrng.lumii.lv](https://qrng.lumii.lv/)
 but can be adapted to suit other requirements. By default, it uses a [PRNG](https://en.wikipedia.org/wiki/Pseudorandom_number_generator).
 
@@ -15,15 +17,16 @@ but can be adapted to suit other requirements. By default, it uses a [PRNG](http
 Building the project requires kernel header files.
 Acquiring them is described in [LKMPG#headers](https://sysprog21.github.io/lkmpg/#headers).
 
-The project also requires [qrng-client](https://github.com/LUMII-Syslab/qrng-client) - library
-used to fetch bytes from [qrng.lumii.lv](https://qrng.lumii.lv/).
+To fetch random bytes from the remote [QRNG](https://en.wikipedia.org/wiki/Hardware_random_number_generator)
+provided by [qrng.lumii.lv](https://qrng.lumii.lv/),
+the project also requires [qrng-client](https://github.com/LUMII-Syslab/qrng-client) library.
 
-`qrng-client` is provided in the repo with both install and uninstall scripts for ease of deployment.
+`qrng-client` is provided in the repo with both install and uninstall scripts for ease of use.
+However, it is not included in the `Makefile` and has to be installed manually.
 
 ## Usage
 
 To build and install the service, `cd` into the root of the repo and run `make install`.
-
 The `/dev/qrandom0` file can then be read from.
 
 Reading operation will be blocked until data is available unless `O_NONBLOCK`
