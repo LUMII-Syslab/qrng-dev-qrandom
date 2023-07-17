@@ -3,8 +3,8 @@
 The repository contains a `Makefile` which will build and install both a character device
 and a [userspace](https://en.wikipedia.org/wiki/User_space_and_kernel_space) service.
 
-The userspace service feeds random bytes into the kernelspace character device driver.
-The bytes can then be read from `/dev/qrandom0` which serves as a replacement for `/dev/random`.
+The userspace service feeds random bytes into the kernelspace [character device driver](https://linux-kernel-labs.github.io/refs/heads/master/labs/device_drivers.html).
+These bytes can then be read from `/dev/qrandom0` which serves as a replacement for `/dev/random`.
 
 ## Requirements
 
